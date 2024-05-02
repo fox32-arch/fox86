@@ -1,0 +1,3 @@
+[submodule "fennecos"]
+	path = fennecos
+	url = https://github.com/ry755/fennecos

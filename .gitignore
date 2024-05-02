@@ -1,0 +1,6 @@
+*.img
+*.elf
+*.rom
+fox32rom.h
+**/*.o
+.vscode/
