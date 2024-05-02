@@ -16,6 +16,8 @@ OBJS += \
 	fennecos/build/user/framebuffer.o \
 	fennecos/build/user/keyboard.o \
 	fennecos/build/user/user.o \
+	fennecos/build/libc/fox/alloc.o \
+	fennecos/build/libc/fox/string.o \
 	fennecos/build/libc/stdio/getchar.o \
 	fennecos/build/libc/stdio/gets.o \
 	fennecos/build/libc/stdio/printf.o \

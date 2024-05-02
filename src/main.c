@@ -47,7 +47,7 @@ int main() {
     //tick_start = SDL_GetTicks();
     //tick_end = SDL_GetTicks();
 
-    new_disk("disk0.img", 0);
+    //new_disk("disk0.img", 0);
 
     while (!done && !bus_requests_exit) {
         main_loop();
@@ -100,11 +100,20 @@ void main_loop(void) {
                 if (error != FOX32_ERR_OK) {
                     printf("error: %d\n", error);
                     yield();
-                    while (true);
+                    exit(1);
                 }
             }
 
             cycles_left -= executed;
+        }
+    }
+
+    event_t event;
+    if (get_next_event(&event)) {
+        if (event.type == KEY_DOWN) {
+            key_pressed(event.arg0);
+        } else if (event.type == KEY_UP) {
+            key_released(event.arg0);
         }
     }
 

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fox/string.h>
 
 #include "cpu.h"
 #include "keyboard.h"
@@ -20,7 +21,7 @@ static node_t *head = NULL;
 static node_t *tail = NULL;
 
 keycode_t key_take(void) {
-    /*Unode_t *node = head;
+    node_t *node = head;
 
     if (node == NULL) {
         return 0;
@@ -35,11 +36,11 @@ keycode_t key_take(void) {
     }
 
     keycode_t code = node->code;
-    return free(node), code;*/
+    return free(node), code;
 }
 
 void key_put(keycode_t code) {
-    /*if (code == 0) abort();
+    if (code == 0) return;
 
     node_t *node = malloc(sizeof(node_t));
 
@@ -53,7 +54,7 @@ void key_put(keycode_t code) {
         tail->next = node;
     }
 
-    tail = node;*/
+    tail = node;
 }
 
 keycode_t key_convert(int sdlcode) {
