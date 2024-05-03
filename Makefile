@@ -46,8 +46,8 @@ fennecos_image:
 	cp fox32.elf fennecos/base_image/bin/
 	cp fox32.rom fennecos/base_image/bin/
 	cd fennecos && sudo ./image.sh
-	cd fennecos && sudo ./image-floppy.sh
 	mv fennecos/boot.img hdd.img
+	cd fennecos && sudo ./image-floppy.sh
 	mv fennecos/floppy.img fdd.img
 
 fox32.elf: $(OBJS)
