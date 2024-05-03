@@ -14,6 +14,8 @@ extern fox32_vm_t vm;
 static uint8_t framebuffer[FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4];
 static overlay_t overlays[32];
 
+uint8_t *hardware_framebuffer = (void *) 0xF0000000;
+
 overlay_t *overlay_get(uint32_t index) {
     //if (index >= 32) abort();
     return &overlays[index];
@@ -49,5 +51,10 @@ void draw_framebuffer() {
         }
     }
 
-    memcpy((void *) 0xF0000000, framebuffer, FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4);
+    //memcpy((void *) 0xF0000000, framebuffer, FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4);
+    for (uint32_t i = 0; i < FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4; i += 4) {
+        hardware_framebuffer[i] = framebuffer[i+2];
+        hardware_framebuffer[i+1] = framebuffer[i+1];
+        hardware_framebuffer[i+2] = framebuffer[i];
+    }
 }
