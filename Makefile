@@ -39,18 +39,12 @@ OBJS += \
 .PHONY: all
 all: fennecos_build fox32.elf fennecos_image
 
-FOX32ROM_IN = fox32.rom
-FOX32ROM_OUT = fox32rom.h
-
-$(FOX32ROM_OUT): $(FOX32ROM_IN)
-	xxd -i $(FOX32ROM_IN) $(FOX32ROM_OUT)
-	sed -i -e 's/fox32_rom/fox32rom/' $(FOX32ROM_OUT)
-
 fennecos_build:
 	cd fennecos && ./build.sh
 
 fennecos_image:
 	cp fox32.elf fennecos/base_image/bin/
+	cp fox32.rom fennecos/base_image/bin/
 	cd fennecos && sudo ./image.sh
 	cd fennecos && sudo ./image-floppy.sh
 	mv fennecos/boot.img hdd.img

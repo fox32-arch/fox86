@@ -13,8 +13,6 @@
 #include "mouse.h"
 #include "serial.h"
 
-#include "../fox32rom.h"
-
 #define FPS 60
 #define TPF 1
 #define TPS (FPS * TPF)
@@ -42,12 +40,23 @@ int main() {
     vm.debug = false;
     vm.headless = false;
 
-    memcpy(vm.memory_rom, fox32rom, sizeof(fox32rom));
+    uint32_t fox32rom_file = open("fox32.rom", MODE_READ);
+    if (fox32rom_file == (uint32_t) -1) {
+        printf("failed to open fox32.rom!\n");
+        exit(1);
+    }
+    printf("reading fox32.rom...\n");
+    yield();
+    read(fox32rom_file, vm.memory_rom, 524288);
+    close(fox32rom_file);
 
     //tick_start = SDL_GetTicks();
     //tick_end = SDL_GetTicks();
 
-    //new_disk("disk0.img", 0);
+    new_disk("disk0.img", 0);
+    new_disk("disk1.img", 1);
+    new_disk("disk2.img", 2);
+    new_disk("disk3.img", 3);
 
     while (!done && !bus_requests_exit) {
         main_loop();
@@ -111,7 +120,10 @@ void main_loop(void) {
     event_t event;
     if (get_next_event(&event)) {
         if (event.type == KEY_DOWN) {
-            key_pressed(event.arg0);
+            if (event.arg0 == 87) // F11
+                done = true;
+            else
+                key_pressed(event.arg0);
         } else if (event.type == KEY_UP) {
             key_released(event.arg0);
         }

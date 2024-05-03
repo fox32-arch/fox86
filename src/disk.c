@@ -16,14 +16,16 @@ void new_disk(const char *filename, size_t id) {
     if (id > 3) { puts("attempting to access disk with ID > 3"); return; }
     printf("mounting %s as disk ID %d\n", filename, (int) id);
     disk_controller.disks[id].file = open(filename, MODE_READ | MODE_WRITE);
-    if (!disk_controller.disks[id].file) {
+    if (disk_controller.disks[id].file == (uint32_t) -1) {
         printf("couldn't open disk file\n");
-        exit(1);
+        yield();
+        return;
     }
     //fseek(disk_controller.disks[id].file, 0, SEEK_END);
     //disk_controller.disks[id].size = ftell(disk_controller.disks[id].file);
     disk_controller.disks[id].size = 512 * 1024; // TODO: fix this!!!!!!!
     //rewind(disk_controller.disks[id].file);
+    yield();
 }
 
 void insert_disk(disk_t disk, size_t id) {
