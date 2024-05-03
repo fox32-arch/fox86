@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <user/user.h>
+
 #include "bus.h"
 #include "cpu.h"
 #include "disk.h"
@@ -117,6 +119,9 @@ void main_loop(void) {
         }
     }
 
+    uint32_t mouse = get_mouse();
+    mouse_moved(mouse & 0xFFFF, mouse >> 16);
+
     event_t event;
     if (get_next_event(&event)) {
         if (event.type == KEY_DOWN) {
@@ -126,6 +131,10 @@ void main_loop(void) {
                 key_pressed(event.arg0);
         } else if (event.type == KEY_UP) {
             key_released(event.arg0);
+        } else if (event.type == MOUSE_DOWN) {
+            mouse_pressed(0);
+        } else if (event.type == MOUSE_UP) {
+            mouse_released(0);
         }
     }
 
