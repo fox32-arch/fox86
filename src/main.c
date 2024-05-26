@@ -57,8 +57,8 @@ int main() {
 
     new_disk("disk0.img", 0);
     new_disk("disk1.img", 1);
-    new_disk("disk2.img", 2);
-    new_disk("disk3.img", 3);
+    new_disk("2:/bin/disk2.img", 2);
+    new_disk("2:/bin/disk3.img", 3);
 
     while (!done && !bus_requests_exit) {
         main_loop();
