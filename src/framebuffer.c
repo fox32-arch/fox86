@@ -14,7 +14,7 @@ extern fox32_vm_t vm;
 static uint8_t framebuffer[FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4];
 static overlay_t overlays[32];
 
-uint8_t *hardware_framebuffer = (void *) 0xF0000000;
+uint8_t *hardware_framebuffer;;
 
 overlay_t *overlay_get(uint32_t index) {
     //if (index >= 32) abort();

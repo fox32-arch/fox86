@@ -1,5 +1,6 @@
 *.img
 *.elf
+*.app
 *.rom
 fox32rom.h
 **/*.o

@@ -23,6 +23,7 @@ fox32_vm_t vm;
 
 extern bool bus_requests_exit;
 extern disk_controller_t disk_controller;
+extern uint8_t *hardware_framebuffer;
 
 uint32_t tick_start;
 uint32_t tick_end;
@@ -41,6 +42,8 @@ int main() {
     vm.halted = false;
     vm.debug = false;
     vm.headless = false;
+
+    hardware_framebuffer = (uint8_t *) get_fb();
 
     uint32_t fox32rom_file = open("fox32.rom", MODE_READ);
     if (fox32rom_file == (uint32_t) -1) {
@@ -71,6 +74,8 @@ int main() {
             //printf("time overrun %d\n", delay);
         }
     }
+
+    free_memory(vm.memory_ram);
 
     return 0;
 }

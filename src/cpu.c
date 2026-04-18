@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <user/user.h>
+
 #include "cpu.h"
 #include "mmu.h"
 
@@ -206,6 +208,8 @@ static void vm_init(vm_t *vm) {
     vm->io_user = NULL;
     vm->io_read = io_read_default;
     vm->io_write = io_write_default;
+
+    vm->memory_ram = alloc_memory(FOX32_MEMORY_RAM);
 }
 
 static noreturn void vm_panic(vm_t *vm, err_t err) {

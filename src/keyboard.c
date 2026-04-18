@@ -4,7 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fox/string.h>
+
+#include <user/user.h>
 
 #include "cpu.h"
 #include "keyboard.h"
@@ -36,13 +37,13 @@ keycode_t key_take(void) {
     }
 
     keycode_t code = node->code;
-    return free(node), code;
+    return free_memory(node), code;
 }
 
 void key_put(keycode_t code) {
     if (code == 0) return;
 
-    node_t *node = malloc(sizeof(node_t));
+    node_t *node = alloc_memory(sizeof(node_t));
 
     node->prev = tail;
     node->next = NULL;
