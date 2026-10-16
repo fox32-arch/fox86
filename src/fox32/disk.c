@@ -52,7 +52,7 @@ uint64_t get_disk_size(size_t id) {
     if (id > 3) { puts("attempting to access disk with ID > 3"); return 0; }
 
     if (id == 0) return 1440 * 1024;      // floppy disk is always shown as 1440 KiB
-    if (id == 1) return 16 * 1024 * 1024; // IDE disk is always shown as 16 MiB
+    //if (id == 1) return 16 * 1024 * 1024; // IDE disk is always shown as 16 MiB
     return 0;
 }
 

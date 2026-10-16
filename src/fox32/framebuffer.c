@@ -23,33 +23,11 @@ overlay_t *overlay_get(uint32_t index) {
 }
 
 void draw_framebuffer() {
-    bool needs_hw_redraw = false;
-    bool ignore_dirty_flag = false;
-
-    if (background_dirty) {
-        memcpy(framebuffer, &vm.memory_ram[0x02000000], FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4);
-        needs_hw_redraw = true;
-    }
+    memcpy(framebuffer, &vm.memory_ram[0x02000000], FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4);
 
     for (size_t i = 0; i < 32; i++) {
         overlay_t *overlay = &overlays[i];
         if (!overlay->enabled) continue;
-        if (!ignore_dirty_flag) {
-            if (overlay->dirty) {
-                needs_hw_redraw = true;
-                overlay->dirty = false;
-                if (i > 0) {
-                    // redraw the overlay below this
-                    i--;
-                    continue;
-                }
-                ignore_dirty_flag = true;
-            } else if (!background_dirty) {
-                continue;
-            }
-        }
-
-        kprintf("drawing overlay %d\n", i);
 
         size_t pointer = overlay->pointer;
 
@@ -75,13 +53,7 @@ void draw_framebuffer() {
     }
 
     //memcpy((void *) 0xF0000000, framebuffer, FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4);
-    if (needs_hw_redraw) {
-        kprintf("hw redraw...\n");
-        for (uint32_t i = 0; i < FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4; i += 1) {
-            ((uint32_t *) hardware_framebuffer)[i] = __builtin_bswap32(((uint32_t *) framebuffer)[i]) >> 8;
-        }
+    for (uint32_t i = 0; i < FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4; i += 1) {
+        ((uint32_t *) hardware_framebuffer)[i] = __builtin_bswap32(((uint32_t *) framebuffer)[i]) >> 8;
     }
-
-    if (background_dirty)
-        background_dirty = false;
 }

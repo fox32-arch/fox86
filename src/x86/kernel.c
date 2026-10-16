@@ -101,6 +101,7 @@ void kernel_main(multiboot_info_t *multiboot_struct) {
         main_loop();
         tick_end = get_timer_value();
         kprintf("main loop took %d ticks\n", tick_end - tick_start);
+        rtc_uptime += tick_end - tick_start;
 
         /*tick_end = get_timer_value();
         int delay = 1000/TPS - (tick_end - tick_start);
@@ -123,13 +124,13 @@ void main_loop(void) {
 
     int dt = 1;
 
-    int cycles_per_tick = FOX32_CPU_HZ / TPS / dt;
-    int extra_cycles = FOX32_CPU_HZ / TPS - (cycles_per_tick * dt);
+    int cycles_per_tick = 50000; //FOX32_CPU_HZ / TPS / dt;
+    int extra_cycles = 0; //FOX32_CPU_HZ / TPS - (cycles_per_tick * dt);
 
     fox32_err_t error = FOX32_ERR_OK;
 
     for (int i = 0; i < 1; i++) {
-        rtc_uptime += 1;
+        //rtc_uptime += 1;
         //rtc_time = time(NULL);
 
         int cycles_left = cycles_per_tick;
@@ -176,8 +177,12 @@ void main_loop(void) {
     }
 
     if ((tick % TPF) == 0) {
-        if (!vm.headless)
+        if (!vm.headless) {
+            uint32_t draw_tick_start = get_timer_value();
             draw_framebuffer();
+            uint32_t draw_tick_end = get_timer_value();
+            kprintf("screen refresh took %d ticks\n", draw_tick_end - draw_tick_start);
+        }
         fox32_raise(&vm, VSYNC_INTERRUPT_VECTOR);
         vm.halted = false;
     }

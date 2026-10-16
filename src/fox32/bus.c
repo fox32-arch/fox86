@@ -173,7 +173,6 @@ int bus_io_write(void *user, uint32_t value, uint32_t port) {
                     uint32_t y = (value & 0xFFFF0000) >> 16;
                     overlay_get(overlay_number)->x = x;
                     overlay_get(overlay_number)->y = y;
-                    overlay_get(overlay_number)->dirty = true;
                     break;
                 };
                 case 0x01: {
@@ -182,19 +181,16 @@ int bus_io_write(void *user, uint32_t value, uint32_t port) {
                     uint32_t height = (value & 0xFFFF0000) >> 16;
                     overlay_get(overlay_number)->width = width;
                     overlay_get(overlay_number)->height = height;
-                    overlay_get(overlay_number)->dirty = true;
                     break;
                 };
                 case 0x02: {
                     // overlay framebuffer pointer
                     overlay_get(overlay_number)->pointer = value;
-                    overlay_get(overlay_number)->dirty = true;
                     break;
                 };
                 case 0x03: {
                     // overlay enable status
                     overlay_get(overlay_number)->enabled = value != 0;
-                    overlay_get(overlay_number)->dirty = true;
                     break;
                 };
             }

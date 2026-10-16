@@ -14,7 +14,6 @@ typedef struct {
     uint32_t x, y;
     uint32_t width, height;
     bool enabled;
-    bool dirty;
 } overlay_t;
 
 overlay_t *overlay_get(uint32_t index);

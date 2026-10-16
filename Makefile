@@ -4,7 +4,7 @@ all: base_image/boot/fox86.elf boot.img
 floppy: base_image/boot/fox86.elf floppy.img
 
 qemu: boot.img
-	qemu-system-i386 -hda boot.img -serial stdio -m 256M
+	qemu-system-i386 -hda boot.img -fda fox32os.img -serial stdio -m 256M
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 KERNEL_FILES := $(call rwildcard,src/x86,*.c)
@@ -26,7 +26,10 @@ base_image/boot/fox86.elf: $(KERNEL_OUT_FILES) $(LIBK_OUT_FILES) $(FOX32_OUT_FIL
 	@echo '[LINK] $@' && \
 	i686-elf-gcc -T src/x86/linker.ld -o $@ -ffreestanding -O3 -ffast-math -nostdlib $^ -lgcc
 
-boot.img: base_image/boot/fox86.elf
+base_image/disk0.img: fox32os.img
+	cp $< $@
+
+boot.img: base_image/boot/fox86.elf base_image/disk0.img
 	sudo bash image.sh
 
 floppy.img: base_image/boot/fox86.elf
