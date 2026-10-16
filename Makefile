@@ -1,61 +1,37 @@
-AS = i686-elf-as
-CC = i686-elf-gcc
+.phony: all clean
 
-CFILES = src/main.c \
-		src/bus.c \
-		src/cpu.c \
-		src/disk.c \
-		src/framebuffer.c \
-		src/keyboard.c \
-		src/mmu.c \
-		src/mouse.c
+all: base_image/boot/fox86.elf boot.img
+floppy: base_image/boot/fox86.elf floppy.img
 
-OBJS = $(addsuffix .o, $(basename $(CFILES)))
-OBJS += \
-	fennecos/user/crt0.o \
-	fennecos/user/framebuffer.o \
-	fennecos/user/keyboard.o \
-	fennecos/user/user.o \
-	fennecos/libc/stdio/getchar.o \
-	fennecos/libc/stdio/gets.o \
-	fennecos/libc/stdio/printf.o \
-	fennecos/libc/stdio/putchar.o \
-	fennecos/libc/stdio/puts.o \
-	fennecos/libc/stdio/vprintf.o \
-	fennecos/libc/stdlib/itoa.o \
-	fennecos/libc/stdlib/utoa.o \
-	fennecos/libc/string/memcmp.o \
-	fennecos/libc/string/memcpy.o \
-	fennecos/libc/string/memmove.o \
-	fennecos/libc/string/memset.o \
-	fennecos/libc/string/strcat.o \
-	fennecos/libc/string/strchr.o \
-	fennecos/libc/string/strcmp.o \
-	fennecos/libc/string/strcpy.o \
-	fennecos/libc/string/strlen.o
+qemu: boot.img
+	qemu-system-i386 -hda boot.img -serial stdio -m 256M
 
-.PHONY: all
-all: fennecos_build fox32.app fennecos_image
+rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
+KERNEL_FILES := $(call rwildcard,src/x86,*.c)
+KERNEL_OUT_FILES := src/x86/boot.o ${KERNEL_FILES:.c=.o}
+LIBK_FILES := $(call rwildcard,src/x86/libk,*.c)
+LIBK_OUT_FILES := ${LIBK_FILES:.c=.o}
+FOX32_FILES := $(call rwildcard,src/fox32,*.c)
+FOX32_OUT_FILES := ${FOX32_FILES:.c=.o}
 
-fennecos_build:
-	$(MAKE) -C fennecos
+src/x86/boot.o: src/x86/boot.s
+	@echo '[ASM] $<' && \
+	i686-elf-as src/x86/boot.s -o src/x86/boot.o
 
-fennecos_image:
-	rm -rf fennecos/base_image/app/*
-	cp fox32.app fennecos/base_image/app/
-	cp fox32.rom fennecos/base_image/app/
-	cd fennecos && sudo ./image.sh
-	mv fennecos/boot.img hdd.img
-	cd fennecos && sudo ./image-floppy.sh
-	mv fennecos/floppy.img fdd.img
+%.o: %.c
+	@echo '[CC] $<' && \
+	i686-elf-gcc -c $< -o $@ -g -std=gnu99 -ffreestanding -O3 -ffast-math -Wall -Wextra -Isrc/x86/include/ -Isrc/x86/libk/include/ -Isrc/
 
-fox32.app: $(OBJS)
-	$(CC) -o $@.elf $(OBJS) -pie -flinker-output=pie -T fennecos/user/user.ld -ffreestanding -O2 -nostdlib -lgcc -Wl,--no-warn-rwx-segments
-	fennecos/elf2app.py $@.elf $@
-	rm $@.elf
+base_image/boot/fox86.elf: $(KERNEL_OUT_FILES) $(LIBK_OUT_FILES) $(FOX32_OUT_FILES)
+	@echo '[LINK] $@' && \
+	i686-elf-gcc -T src/x86/linker.ld -o $@ -ffreestanding -O3 -ffast-math -nostdlib $^ -lgcc
 
-%.o: %.c $(FOX32ROM_OUT)
-	$(CC) -o $@ -c $< -g -std=gnu99 -fpie -T fennecos/user/user.ld -Wl,-no-dynamic-linker -ffreestanding -O2 -Wall -Wextra -Ifennecos/include/ -Ifennecos/libc/include/
+boot.img: base_image/boot/fox86.elf
+	sudo bash image.sh
 
+floppy.img: base_image/boot/fox86.elf
+	sudo bash image-floppy.sh
+
+FORCE: ;
 clean:
-	rm -rf fox32.elf fox32rom.h $(OBJS)
+	rm -f boot.img floppy.img $(KERNEL_OUT_FILES) $(LIBK_OUT_FILES) $(FOX32_OUT_FILES)

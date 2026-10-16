@@ -1,33 +1,55 @@
-#include <stdarg.h>
-#include <stdbool.h>
+#include <kernel/allocator.h>
+#include <kernel/event.h>
+#include <kernel/floppy.h>
+#include <kernel/framebuffer.h>
+#include <kernel/gdt.h>
+#include <kernel/ide.h>
+#include <kernel/idt.h>
+#include <kernel/io.h>
+#include <kernel/mouse.h>
+#include <kernel/multiboot.h>
+#include <kernel/pic.h>
+#include <kernel/pit.h>
+#include <kernel/ps2.h>
+#include <kernel/serial.h>
+#include <kernel/timer.h>
+
+#include <fox32/bus.h>
+#include <fox32/cpu.h>
+#include <fox32/disk.h>
+#include <fox32/framebuffer.h>
+#include <fox32/keyboard.h>
+#include <fox32/mouse.h>
+
+#include "../fox32rom.h"
+
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <user/user.h>
+multiboot_info_t copied_multiboot_struct;
 
-#include "bus.h"
-#include "cpu.h"
-#include "disk.h"
-#include "framebuffer.h"
-#include "keyboard.h"
-#include "mouse.h"
-#include "serial.h"
-
-#define FPS 60
-#define TPF 1
-#define TPS (FPS * TPF)
+char boot_disk_char;
 
 fox32_vm_t vm;
+
+// timer runs at 100 Hz
+#define FPS 50
+#define TPF 1
+#define TPS (FPS * TPF)
 
 extern bool bus_requests_exit;
 extern disk_controller_t disk_controller;
 extern uint8_t *hardware_framebuffer;
 
+extern uint16_t mouse_x;
+extern uint16_t mouse_y;
+
 uint32_t tick_start;
 uint32_t tick_end;
-int ticks = 0;
+int tick = 0;
 bool done = false;
 
 //time_t rtc_time;
@@ -35,7 +57,34 @@ uint32_t rtc_uptime;
 
 void main_loop(void);
 
-int main() {
+void kernel_main(multiboot_info_t *multiboot_struct) {
+    init_gdt();
+    init_serial();
+    init_pit();
+    init_pic();
+    init_ide();
+    init_timer();
+    init_ps2_keyboard();
+    init_mouse();
+    memcpy(&copied_multiboot_struct, multiboot_struct, sizeof(multiboot_info_t));
+    init_allocator(copied_multiboot_struct.mmap_addr, copied_multiboot_struct.mmap_length);
+    init_floppy_1();
+    init_idt();
+    init_floppy_2();
+
+    bool booting_from_floppy = (copied_multiboot_struct.boot_device >> 24) == 0x00 ? true : false;
+    boot_disk_char = booting_from_floppy ? '2' : '1';
+
+    // initialize the framebuffer
+    init_framebuffer(
+        copied_multiboot_struct.framebuffer_addr,
+        copied_multiboot_struct.framebuffer_width,
+        copied_multiboot_struct.framebuffer_height,
+        copied_multiboot_struct.framebuffer_pitch,
+        copied_multiboot_struct.framebuffer_bpp,
+        0x444444
+    );
+
     fox32_init(&vm);
     vm.io_read = bus_io_read;
     vm.io_write = bus_io_write;
@@ -43,46 +92,32 @@ int main() {
     vm.debug = false;
     vm.headless = false;
 
-    hardware_framebuffer = (uint8_t *) get_fb();
+    hardware_framebuffer = (uint8_t *) (uintptr_t) copied_multiboot_struct.framebuffer_addr;
 
-    uint32_t fox32rom_file = open("fox32.rom", MODE_READ);
-    if (fox32rom_file == (uint32_t) -1) {
-        printf("failed to open fox32.rom!\n");
-        exit(1);
-    }
-    printf("reading fox32.rom...\n");
-    yield();
-    read(fox32rom_file, vm.memory_rom, 524288);
-    close(fox32rom_file);
-
-    //tick_start = SDL_GetTicks();
-    //tick_end = SDL_GetTicks();
-
-    new_disk("disk0.img", 0);
-    new_disk("disk1.img", 1);
-    new_disk("2:/bin/disk2.img", 2);
-    new_disk("2:/bin/disk3.img", 3);
+    memcpy(vm.memory_rom, fox32rom, fox32rom_len);
 
     while (!done && !bus_requests_exit) {
+        tick_start = get_timer_value();
         main_loop();
+        tick_end = get_timer_value();
+        kprintf("main loop took %d ticks\n", tick_end - tick_start);
 
-        //tick_end = SDL_GetTicks();
+        /*tick_end = get_timer_value();
         int delay = 1000/TPS - (tick_end - tick_start);
         if (delay > 0) {
+            //kprintf("sleeping %d\n", delay);
             //sleep(delay);
         } else {
-            //printf("time overrun %d\n", delay);
-        }
+            //kprintf("time overrun %d\n", delay);
+        }*/
     }
 
-    free_memory(vm.memory_ram);
-
-    return 0;
+    abort();
 }
 
 void main_loop(void) {
-    //int dt = SDL_GetTicks() - tick_start;
-    //tick_start = SDL_GetTicks();
+    //int dt = get_timer_value() - tick_start;
+    //tick_start = get_timer_value();
     //if (!dt)
     //    dt = 1;
 
@@ -115,8 +150,6 @@ void main_loop(void) {
                 error = fox32_recover(&vm, error);
                 if (error != FOX32_ERR_OK) {
                     printf("error: %d\n", error);
-                    yield();
-                    exit(1);
                 }
             }
 
@@ -124,8 +157,7 @@ void main_loop(void) {
         }
     }
 
-    uint32_t mouse = get_mouse();
-    mouse_moved(mouse & 0xFFFF, mouse >> 16);
+    mouse_moved(mouse_x, mouse_y);
 
     event_t event;
     if (get_next_event(&event)) {
@@ -143,7 +175,7 @@ void main_loop(void) {
         }
     }
 
-    if ((ticks % TPF) == 0) {
+    if ((tick % TPF) == 0) {
         if (!vm.headless)
             draw_framebuffer();
         fox32_raise(&vm, VSYNC_INTERRUPT_VECTOR);
@@ -152,5 +184,5 @@ void main_loop(void) {
 
     //done = ScreenProcessEvents();
 
-    ticks++;
+    tick++;
 }

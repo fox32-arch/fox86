@@ -1,0 +1,24 @@
+#include <kernel/event.h>
+#include <kernel/io.h>
+#include <kernel/isr.h>
+#include <kernel/pic.h>
+#include <kernel/ps2.h>
+#include <kernel/trapframe.h>
+
+#include <stdint.h>
+
+void init_ps2_keyboard() {
+    pic_unmask(1);
+    install_interrupt_handler(1, ps2_keyboard_interrupt_handler);
+}
+
+void ps2_keyboard_interrupt_handler(uint8_t irq, trap_frame_t *trap_frame, uint32_t error) {
+    (void) irq;
+    (void) trap_frame;
+    (void) error;
+    uint8_t scancode = inb(0x60);
+    event_t event;
+    event.type = scancode & 0x80 ? KEY_UP : KEY_DOWN;
+    event.arg0 = scancode;
+    new_event(&event);
+}

@@ -14,7 +14,8 @@ extern fox32_vm_t vm;
 static uint8_t framebuffer[FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4];
 static overlay_t overlays[32];
 
-uint8_t *hardware_framebuffer;;
+bool background_dirty = true;
+uint8_t *hardware_framebuffer;
 
 overlay_t *overlay_get(uint32_t index) {
     //if (index >= 32) abort();
@@ -22,11 +23,33 @@ overlay_t *overlay_get(uint32_t index) {
 }
 
 void draw_framebuffer() {
-    memcpy(framebuffer, &vm.memory_ram[0x02000000], FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4);
+    bool needs_hw_redraw = false;
+    bool ignore_dirty_flag = false;
+
+    if (background_dirty) {
+        memcpy(framebuffer, &vm.memory_ram[0x02000000], FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4);
+        needs_hw_redraw = true;
+    }
 
     for (size_t i = 0; i < 32; i++) {
         overlay_t *overlay = &overlays[i];
         if (!overlay->enabled) continue;
+        if (!ignore_dirty_flag) {
+            if (overlay->dirty) {
+                needs_hw_redraw = true;
+                overlay->dirty = false;
+                if (i > 0) {
+                    // redraw the overlay below this
+                    i--;
+                    continue;
+                }
+                ignore_dirty_flag = true;
+            } else if (!background_dirty) {
+                continue;
+            }
+        }
+
+        kprintf("drawing overlay %d\n", i);
 
         size_t pointer = overlay->pointer;
 
@@ -52,9 +75,13 @@ void draw_framebuffer() {
     }
 
     //memcpy((void *) 0xF0000000, framebuffer, FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4);
-    for (uint32_t i = 0; i < FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4; i += 4) {
-        hardware_framebuffer[i] = framebuffer[i+2];
-        hardware_framebuffer[i+1] = framebuffer[i+1];
-        hardware_framebuffer[i+2] = framebuffer[i];
+    if (needs_hw_redraw) {
+        kprintf("hw redraw...\n");
+        for (uint32_t i = 0; i < FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT * 4; i += 1) {
+            ((uint32_t *) hardware_framebuffer)[i] = __builtin_bswap32(((uint32_t *) framebuffer)[i]) >> 8;
+        }
     }
+
+    if (background_dirty)
+        background_dirty = false;
 }

@@ -1,0 +1,13 @@
+#pragma once
+
+#include <kernel/trapframe.h>
+
+#include <stdint.h>
+
+#define SECTOR_SIZE 512
+
+void init_ide();
+void wait_for_disk();
+void read_sector(void *destination, uint32_t sector);
+void write_sector(const void *source, uint32_t sector);
+void ide_interrupt_handler(uint8_t irq, trap_frame_t *trap_frame, uint32_t error);

@@ -3,10 +3,13 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <user/user.h>
+#include <kernel/allocator.h>
 
 #include "cpu.h"
 #include "mmu.h"
+#include "framebuffer.h"
+
+extern bool background_dirty;
 
 typedef fox32_err_t err_t;
 
@@ -209,7 +212,7 @@ static void vm_init(vm_t *vm) {
     vm->io_read = io_read_default;
     vm->io_write = io_write_default;
 
-    vm->memory_ram = alloc_memory(FOX32_MEMORY_RAM);
+    vm->memory_ram = (uint8_t *) allocate(FOX32_MEMORY_RAM, false);
 }
 
 static noreturn void vm_panic(vm_t *vm, err_t err) {
@@ -268,6 +271,28 @@ static uint8_t *vm_findmemory_phys(vm_t *vm, uint32_t address, uint32_t size, bo
 
     if (address_end > address) {
         if (address_end <= FOX32_MEMORY_RAM) {
+            // check if writing to background framebuffer
+            if (
+                write &&
+                address >= 0x02000000 &&
+                address < (0x02000000 + (640 * 480 * 4))
+            ) {
+                background_dirty = true;
+            }
+
+            // check if writing to overlay framebuffer
+            for (size_t i = 0; i < 32; i++) {
+                overlay_t *overlay = overlay_get(i);
+                if (!overlay->enabled) continue;
+                if (
+                    write &&
+                    address >= overlay->pointer &&
+                    address < (overlay->pointer + (overlay->width * overlay->height * 4))
+                ) {
+                    overlay->dirty = true;
+                }
+            }
+
             return &vm->memory_ram[address];
         }
         if (
